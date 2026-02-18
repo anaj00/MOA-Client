@@ -156,8 +156,7 @@ export default function SyncPage() {
       cell: ({ row }) => (
         <Button
           onClick={() => row.original.onSync(row.original.name)}
-          // disabled={row.original.syncing}
-          disabled={true}
+          disabled={row.original.syncing}
           size="sm"
           className="ml-auto gap-2"
         >
@@ -167,8 +166,7 @@ export default function SyncPage() {
               Syncing...
             </>
           ) : (
-            // "Sync Form"
-            "Disabled"
+            "Sync Form"
           )}
         </Button>
       ),

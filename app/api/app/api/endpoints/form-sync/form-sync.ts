@@ -23,6 +23,8 @@ import type {
   UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
+import type { SyncSingleFormDto } from "../../models";
+
 import { preconfiguredAxiosFunction } from "../../../../preconfig.axios";
 
 export const formSyncControllerCompareFormVersions = (signal?: AbortSignal) => {
@@ -321,10 +323,15 @@ export const useFormSyncControllerSyncAllForms = <TError = unknown, TContext = u
 
   return useMutation(mutationOptions, queryClient);
 };
-export const formSyncControllerSyncSingleForm = (signal?: AbortSignal) => {
+export const formSyncControllerSyncSingleForm = (
+  syncSingleFormDto: SyncSingleFormDto,
+  signal?: AbortSignal
+) => {
   return preconfiguredAxiosFunction<null>({
     url: `/api/form-sync/sync-single`,
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    data: syncSingleFormDto,
     signal,
   });
 };
@@ -336,13 +343,13 @@ export const getFormSyncControllerSyncSingleFormMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof formSyncControllerSyncSingleForm>>,
     TError,
-    void,
+    { data: SyncSingleFormDto },
     TContext
   >;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof formSyncControllerSyncSingleForm>>,
   TError,
-  void,
+  { data: SyncSingleFormDto },
   TContext
 > => {
   const mutationKey = ["formSyncControllerSyncSingleForm"];
@@ -354,9 +361,11 @@ export const getFormSyncControllerSyncSingleFormMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof formSyncControllerSyncSingleForm>>,
-    void
-  > = () => {
-    return formSyncControllerSyncSingleForm();
+    { data: SyncSingleFormDto }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return formSyncControllerSyncSingleForm(data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -365,7 +374,7 @@ export const getFormSyncControllerSyncSingleFormMutationOptions = <
 export type FormSyncControllerSyncSingleFormMutationResult = NonNullable<
   Awaited<ReturnType<typeof formSyncControllerSyncSingleForm>>
 >;
-
+export type FormSyncControllerSyncSingleFormMutationBody = SyncSingleFormDto;
 export type FormSyncControllerSyncSingleFormMutationError = unknown;
 
 export const useFormSyncControllerSyncSingleForm = <TError = unknown, TContext = unknown>(
@@ -373,7 +382,7 @@ export const useFormSyncControllerSyncSingleForm = <TError = unknown, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof formSyncControllerSyncSingleForm>>,
       TError,
-      void,
+      { data: SyncSingleFormDto },
       TContext
     >;
   },
@@ -381,7 +390,7 @@ export const useFormSyncControllerSyncSingleForm = <TError = unknown, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof formSyncControllerSyncSingleForm>>,
   TError,
-  void,
+  { data: SyncSingleFormDto },
   TContext
 > => {
   const mutationOptions = getFormSyncControllerSyncSingleFormMutationOptions(options);

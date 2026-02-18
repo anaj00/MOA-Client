@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 
+export * from "./_signatoryForm";
 export * from "./_signatoryJWTPayload";
 export * from "./addFormToGroupDto";
 export * from "./approveSignatoryDto";
@@ -75,6 +76,7 @@ export * from "./formsControllerGetLatestFormDocumentAndMetadataParams";
 export * from "./formsControllerGetPendingParams";
 export * from "./formsControllerGetRegistryFormDocumentParams";
 export * from "./formsControllerGetRegistryFormMetadataParams";
+export * from "./formsControllerMarkFormAsFirstViewedParams";
 export * from "./getExportForSignatoryDto";
 export * from "./getSignatoryFormSettingsRequest";
 export * from "./getSignatoryFormSettingsResponse";
@@ -156,4 +158,4 @@ export * from "./signingParty";
 export * from "./updateFieldDto";
 export * from "./updateFieldDtoSource";
 export * from "./updateSignatoryDto";
-export * from "./formsControllerMarkFormAsFirstViewedParams";
+export * from "./syncSingleFormDto";
