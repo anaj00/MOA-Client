@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2, Upload, Check } from "lucide-react";
@@ -15,7 +15,6 @@ const CreateFormPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [formName, setFormName] = useState("");
   const [formLabel, setFormLabel] = useState("");
   const [signingParties, setSigningParties] = useState<IFormSigningParty[]>([
     {
@@ -25,6 +24,15 @@ const CreateFormPage = () => {
       signatory_source: "initiator",
     },
   ]);
+
+  // Derive form name from label (no spaces, lowercase)
+  const formName = useMemo(() => {
+    return formLabel
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
+  }, [formLabel]);
 
   const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,16 +52,12 @@ const CreateFormPage = () => {
       toast.error("Please upload a PDF file");
       return;
     }
-    if (!formName.trim()) {
-      toast.error("Please enter a form name");
-      return;
-    }
     if (!formLabel.trim()) {
       toast.error("Please enter a form label");
       return;
     }
     if (signingParties.length === 0) {
-      toast.error("Please add at least one signing party");
+      toast.error("Please add at least one recipient");
       return;
     }
 
@@ -94,89 +98,73 @@ const CreateFormPage = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-white">
-      {/* Header - Sticky at top */}
-      <div className="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-white px-6 py-3">
-        <div className="mx-auto max-w-3xl px-6">
-          <h1 className="font-semibold text-slate-900">Create New Form</h1>
-        </div>
-      </div>
-
+    <div className="flex w-screen bg-white">
       {/* Content - Scrolls with footer buttons at end */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-3xl space-y-4 px-6 py-4">
-          {/* PDF Upload Section */}
-          <div className="space-y-1.5">
-            <h2 className="text-xs font-semibold text-slate-900">PDF Document</h2>
-            <div className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-colors hover:bg-slate-100">
-              <label className="flex cursor-pointer flex-col items-center gap-2">
-                <Upload className="h-7 w-7 text-slate-400" />
-                <div>
-                  <p className="text-xs font-medium text-slate-900">
-                    {pdfFile ? "✓ PDF Uploaded" : "Click to upload PDF"}
+      <div className="mx-auto w-full max-w-3xl space-y-4 py-8">
+        <h1 className="text-2xl font-semibold text-slate-900">Create New Form</h1>
+
+        {/* Form Label Section - Display Name */}
+        <div className="space-y-1.5">
+          <h2 className="text-slate-900">Display Name</h2>
+          <FormInput
+            placeholder="Student MOA"
+            value={formLabel}
+            setter={setFormLabel}
+            required={true}
+          />
+          {formLabel && (
+            <p className="text-xs text-slate-500">
+              Form name: <span className="font-mono font-semibold">{formName}</span>
+            </p>
+          )}
+        </div>
+
+        {/* PDF Upload Section */}
+        <div className="space-y-1.5">
+          <h2 className="text-slate-900">PDF Document</h2>
+          <div className="rounded-[0.33em] border-2 border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-colors hover:bg-slate-100">
+            <label className="flex cursor-pointer flex-col items-center gap-2">
+              <Upload className="h-7 w-7 text-slate-400" />
+              <div>
+                <p className="text-xs font-medium text-slate-900">
+                  {pdfFile ? "✓ PDF Uploaded" : "Click to upload PDF"}
+                </p>
+                {pdfFile ? (
+                  <p className="mt-0.5 text-[11px] text-slate-600">{pdfFile.name}</p>
+                ) : (
+                  <p className="mt-0.5 text-[11px] text-slate-600">
+                    Drag and drop or click to select
                   </p>
-                  {pdfFile ? (
-                    <p className="mt-0.5 text-[11px] text-slate-600">{pdfFile.name}</p>
-                  ) : (
-                    <p className="mt-0.5 text-[11px] text-slate-600">
-                      Drag and drop or click to select
-                    </p>
-                  )}
-                </div>
-                <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" />
-              </label>
-            </div>
+                )}
+              </div>
+              <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" />
+            </label>
           </div>
+        </div>
 
-          {/* Form Details Section */}
-          <div className="space-y-1.5">
-            <h2 className="text-xs font-semibold text-slate-900">Form Details</h2>
-            <div className="space-y-3 rounded-lg bg-slate-50 p-3">
-              <FormInput
-                label="Form Name"
-                placeholder="e.g., employee_onboarding"
-                value={formName}
-                setter={setFormName}
-                required={true}
-              />
-
-              <FormTextarea
-                label="Form Label"
-                placeholder="e.g., Employee Onboarding Form"
-                value={formLabel}
-                setter={setFormLabel}
-                required={true}
-              />
-            </div>
+        {/* Recipients Section */}
+        <div className="space-y-1.5">
+          <h2 className="text-slate-900">Add Recipients</h2>
+          <div className="rounded-lg bg-slate-50 p-3">
+            <PartiesPanel parties={signingParties} onPartiesChange={setSigningParties} />
           </div>
+        </div>
 
-          {/* Signing Parties Section */}
-          <div className="space-y-1.5">
-            <h2 className="text-xs font-semibold text-slate-900">Signing Parties</h2>
-            <div className="rounded-lg bg-slate-50 p-3">
-              <PartiesPanel parties={signingParties} onPartiesChange={setSigningParties} />
-            </div>
-          </div>
-
-          {/* Footer Buttons - At end of scrollable content */}
-          <div className="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4">
-            <Button variant="outline" onClick={() => router.back()} disabled={isLoading} size="sm">
-              Cancel
-            </Button>
-            <Button onClick={handleCreateForm} disabled={isLoading} className="" size="sm">
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Check className="h-3 w-3" />
-                  Create & Open in Editor
-                </>
-              )}
-            </Button>
-          </div>
+        {/* Footer Buttons - At end of scrollable content */}
+        <div className="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4">
+          <Button onClick={handleCreateForm} disabled={isLoading} className="" size="sm">
+            {isLoading ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Check className="h-3 w-3" />
+                Next
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>
