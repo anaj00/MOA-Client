@@ -1,6 +1,5 @@
 "use client";
-
-import { Button } from "@betterinternship/package.components";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   function redirectToSubdomain(subdomain: string) {
