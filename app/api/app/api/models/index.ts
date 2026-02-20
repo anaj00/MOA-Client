@@ -155,7 +155,7 @@ export * from "./signatoryVerifyOtpDto";
 export * from "./signatureValue";
 export * from "./signedOrExternalDocumentInfo";
 export * from "./signingParty";
+export * from "./syncSingleFormDto";
 export * from "./updateFieldDto";
 export * from "./updateFieldDtoSource";
 export * from "./updateSignatoryDto";
-export * from "./syncSingleFormDto";

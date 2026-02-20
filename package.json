@@ -9,6 +9,13 @@
     "start": "next start",
     "lint": "next lint"
   },
+  "engines": {
+    "node": "20.x"
+  },
+  "overrides": {
+    "ajv": "^8.17.1",
+    "ajv-errors": "^3.0.0"
+  },
   "dependencies": {
     "@babel/runtime": "^7.28.4",
     "@betterinternship/core": "^2.5.0",
