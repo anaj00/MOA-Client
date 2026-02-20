@@ -58,7 +58,9 @@ export function BlocksPanel({
   }, [registry, searchQuery]);
 
   const groupedFields = useMemo(() => {
-    const tags = Array.from(new Set(filteredFields.map((f) => f.tag || "Ungrouped").filter(Boolean)));
+    const tags = Array.from(
+      new Set(filteredFields.map((f) => f.tag || "Ungrouped").filter(Boolean))
+    );
     return tags
       .sort((a, b) => {
         if (a.toLowerCase() === "preset") return -1;
@@ -137,8 +139,7 @@ export function BlocksPanel({
 
     if (!foundSpot && pageFieldBlocks.length > 0) {
       const last = [...pageFieldBlocks].sort(
-        (a, b) =>
-          (a.field_schema!.y - b.field_schema!.y) || (a.field_schema!.x - b.field_schema!.x)
+        (a, b) => a.field_schema!.y - b.field_schema!.y || a.field_schema!.x - b.field_schema!.x
       )[pageFieldBlocks.length - 1];
       nextX = Math.min(pageMaxX - fieldWidth, Math.max(marginX, last.field_schema!.x));
       nextY = Math.min(pageMaxY - fieldHeight, last.field_schema!.y + rowStep);
@@ -171,7 +172,8 @@ export function BlocksPanel({
         align_v: baseSchema?.align_v || "middle",
         label: baseSchema?.label || field.label || field.name || field.id,
         tooltip_label: baseSchema?.tooltip_label || field.tooltip_label || "",
-        shared: typeof baseSchema?.shared === "boolean" ? baseSchema.shared : (field.shared ?? true),
+        shared:
+          typeof baseSchema?.shared === "boolean" ? baseSchema.shared : (field.shared ?? true),
         source: baseSchema?.source || field.source || "manual",
         prefiller: baseSchema?.prefiller ?? field.prefiller,
         validator: baseSchema?.validator ?? field.validator,
@@ -212,7 +214,11 @@ export function BlocksPanel({
               {signingParties.map((party) => {
                 const color = getPartyColorByIndex(Math.max(0, party.order - 1));
                 return (
-                  <DropdownMenuItem key={party._id} onClick={() => onPartyChange(party._id)} className="py-1.5">
+                  <DropdownMenuItem
+                    key={party._id}
+                    onClick={() => onPartyChange(party._id)}
+                    className="py-1.5"
+                  >
                     <span
                       className="max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold text-white"
                       style={{ backgroundColor: color.hex }}
@@ -227,7 +233,7 @@ export function BlocksPanel({
         </div>
 
         <div className="relative">
-          <SearchIcon className="pointer-events-none absolute top-2.5 left-3 z-10 h-4 w-4 text-slate-500" />
+          <SearchIcon className="pointer-events-none absolute top-2 left-2 z-99 h-5 w-5 text-slate-500" />
           <Input
             placeholder="Search fields..."
             value={searchQuery}

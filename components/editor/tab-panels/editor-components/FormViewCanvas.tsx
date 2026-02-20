@@ -51,7 +51,9 @@ export function FormViewCanvas() {
   return (
     <div className="h-full overflow-auto p-3">
       <div className="flex h-full flex-col gap-2">
-        <div className="space-y-2">
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-600">Recipient</p>
+
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button
@@ -126,8 +128,14 @@ export function FormViewCanvas() {
               const isSelected = selectedBlockGroup?.id === unit.id;
               const isDragging = draggedUnitId === unit.id;
               const isDropTarget = dragOverUnitId === unit.id && draggedUnitId !== unit.id;
-              const UnitIcon = unit.kind === "header" ? Heading : unit.kind === "paragraph" ? Pilcrow : Type;
-              const unitLabel = unit.kind === "header" ? "Header" : unit.kind === "paragraph" ? "Paragraph" : "Field";
+              const UnitIcon =
+                unit.kind === "header" ? Heading : unit.kind === "paragraph" ? Pilcrow : Type;
+              const unitLabel =
+                unit.kind === "header"
+                  ? "Header"
+                  : unit.kind === "paragraph"
+                    ? "Paragraph"
+                    : "Field";
               return (
                 <button
                   key={unit.id}
@@ -160,11 +168,10 @@ export function FormViewCanvas() {
                   }}
                   onClick={() => handleSelectFormViewUnit(unit.id)}
                   className={cn(
-                    "motion-safe:transition-all motion-safe:duration-150 flex w-full transform-gpu items-center gap-3 rounded-[0.33em] border px-3 py-2.5 text-left",
+                    "flex w-full transform-gpu items-center gap-3 rounded-[0.33em] border px-3 py-2.5 text-left motion-safe:transition-all motion-safe:duration-150",
                     isSelected
                       ? "border-primary/40 bg-primary/5"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                    ,
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
                     isDragging && "scale-[0.99] opacity-70",
                     isDropTarget && "border-primary/50 bg-primary/10 shadow-sm"
                   )}
