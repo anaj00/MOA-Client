@@ -30,7 +30,8 @@ function formatTimestamp(timestamp: string): string {
 }
 
 export function EditorToolbar() {
-  const { formMetadata, formDocument, isSaving, saveForm, activeTab, setActiveTab } = useFormEditor();
+  const { formMetadata, formDocument, isSaving, saveForm, activeTab, setActiveTab } =
+    useFormEditor();
   const isPreviewMode = activeTab === "preview";
 
   return (
@@ -75,7 +76,12 @@ export function EditorToolbar() {
 
       <div className="flex items-center gap-2">
         {activeTab === "settings" ? (
-          <Button variant="outline" size="sm" onClick={() => setActiveTab("editor")} className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setActiveTab("editor")}
+            className="gap-2"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>

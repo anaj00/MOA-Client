@@ -139,31 +139,37 @@ const FormPreviewContent = ({
       {/* Main Content Area with Party Tabs Sidebar */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Party Tabs */}
-        <div className="bg-muted/20 flex w-1/7 flex-col overflow-y-auto border-r">
-          {signingParties.map((party) => {
-            const partyColor = getPartyColorByIndex(Math.max(0, party.order - 1));
-            const isSelected = selectedPartyId === party._id;
+        <div className="bg-card flex w-64 flex-col overflow-hidden border-r">
+          <div className="border-b p-3">
+            <p className="text-xs font-medium text-slate-600">Recipients</p>
+          </div>
+          <div className="flex-1 space-y-1.5 overflow-y-auto p-2.5">
+            {signingParties.map((party) => {
+              const partyColor = getPartyColorByIndex(Math.max(0, party.order - 1));
+              const isSelected = selectedPartyId === party._id;
 
-            return (
-              <button
-                key={party._id}
-                onClick={() => setSelectedPartyId(party._id)}
-                className={cn(
-                  "flex w-full items-start justify-start border-l-[3px] px-1 py-2 text-xs transition-all",
-                  isSelected ? "shadow-sm" : "hover:bg-gray-50"
-                )}
-                style={{
-                  backgroundColor: isSelected ? partyColor.hex + "25" : "transparent",
-                  borderLeftColor: isSelected ? partyColor.hex : "transparent",
-                  overflowWrap: "break-word",
-                  wordBreak: "break-word",
-                }}
-                title={party.signatory_title}
-              >
-                <span className="line-clamp-2">{party.signatory_title}</span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={party._id}
+                  onClick={() => setSelectedPartyId(party._id)}
+                  className={cn(
+                    "flex w-full items-center rounded-[0.33em] border px-2.5 py-2 text-left text-sm transition-all",
+                    isSelected
+                      ? "border-primary/35 bg-primary/5 shadow-sm"
+                      : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                  )}
+                  title={party.signatory_title}
+                >
+                  <span
+                    className="max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                    style={{ backgroundColor: partyColor.hex }}
+                  >
+                    {party.signatory_title}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Right Content - Form and PDF Preview */}
@@ -206,16 +212,7 @@ const FormPreviewContent = ({
       </div>
 
       {/* Footer */}
-      <div className="bg-background flex items-center gap-2 border-t p-3">
-        <Button
-          onClick={handleGenerateTestForm}
-          disabled={isGenerating}
-          size="sm"
-          variant="default"
-        >
-          {isGenerating && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-          {isGenerating ? "Generating..." : "Generate Test PDF"}
-        </Button>
+      <div className="bg-background flex items-center justify-end gap-2 border-t p-3">
         {generationResult && (
           <a
             href={generationResult}
@@ -226,6 +223,15 @@ const FormPreviewContent = ({
             Download
           </a>
         )}
+        <Button
+          onClick={handleGenerateTestForm}
+          disabled={isGenerating}
+          size="sm"
+          variant="default"
+        >
+          {isGenerating && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+          {isGenerating ? "Generating..." : "Generate Test PDF"}
+        </Button>
       </div>
     </div>
   );
