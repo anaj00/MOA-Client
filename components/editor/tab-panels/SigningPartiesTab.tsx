@@ -17,7 +17,7 @@ export function SigningPartiesTab() {
   return (
     <div className="h-full w-full overflow-auto p-6">
       <div className="mx-auto max-w-4xl space-y-6">
-        <h3 className="text-lg font-semibold">Signing Parties</h3>
+        <h3 className="text-lg font-semibold">Recipients</h3>
         <PartiesPanel
           parties={formMetadata.signing_parties || []}
           onPartiesChange={updateSigningParties}

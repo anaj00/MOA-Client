@@ -22,7 +22,7 @@ function FormEditorTabContent() {
   return (
     <div className="bg-background flex h-full w-full">
       {/* Left Panel - Responsive */}
-      <div className="bg-card flex flex-shrink-0 basis-80 flex-col overflow-hidden border-r lg:basis-[400px] xl:basis-[500px]">
+      <div className="bg-card flex flex-shrink-0 basis-72 flex-col overflow-hidden border-r lg:basis-[320px] xl:basis-[360px]">
         <BlocksPanel
           blocks={formMetadata.schema.blocks}
           selectedPartyId={selectedPartyId}

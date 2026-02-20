@@ -12,6 +12,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
   const { isMobile } = useIsMobile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const isEditorRoute = pathname?.includes("/editor") ?? false;
 
   // Close menu on route change
   useEffect(() => {
@@ -35,62 +36,64 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         >
           {/* Mobile Backdrop */}
           {isMobile && isMenuOpen && (
-            <div className="z-[40 fixed inset-0" onClick={() => setIsMenuOpen(false)} />
+            <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setIsMenuOpen(false)} />
           )}
 
-          <header className="bg-background/70 sticky top-0 z-50 border-b backdrop-blur">
-            <div className="mx-auto flex h-16 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
-              {/* Logo */}
-              <Link
-                href="/"
-                className="block flex-shrink-0 border-none text-black! outline-none focus:outline-none"
-              >
-                <div className="flex items-center gap-2">
-                  <img
-                    src="/betterinternship-logo.png"
-                    alt="Logo"
-                    width={25}
-                    height={25}
-                    className="flex-none"
-                  />
-                  <h1 className="mb-0.5 hidden items-center gap-2 text-lg font-semibold tracking-tighter sm:flex sm:text-xl">
-                    BetterInternship
-                  </h1>
-                </div>
-              </Link>
+          {!isEditorRoute && (
+            <header className="bg-background/70 sticky top-0 z-50 border-b backdrop-blur">
+              <div className="mx-auto flex h-16 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
+                {/* Logo */}
+                <Link
+                  href="/"
+                  className="block flex-shrink-0 border-none text-black! outline-none focus:outline-none"
+                >
+                  <div className="flex items-center gap-2">
+                    <img
+                      src="/betterinternship-logo.png"
+                      alt="Logo"
+                      width={25}
+                      height={25}
+                      className="flex-none"
+                    />
+                    <h1 className="mb-0.5 hidden items-center gap-2 text-lg font-semibold tracking-tighter sm:flex sm:text-xl">
+                      BetterInternship
+                    </h1>
+                  </div>
+                </Link>
 
-              {/* Desktop Header (hidden on mobile) */}
-              {!isMobile && (
-                <div className="flex flex-1 justify-end gap-2">
+                {/* Desktop Header (hidden on mobile) */}
+                {!isMobile && (
+                  <div className="flex flex-1 justify-end gap-2">
+                    <Header />
+                  </div>
+                )}
+
+                {/* Mobile Menu Button */}
+                {isMobile && (
+                  <button
+                    type="button"
+                    aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                    className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-md border border-gray-300 hover:bg-gray-50"
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  >
+                    {isMenuOpen ? <XIcon className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile Menu Drawer */}
+              {isMobile && isMenuOpen && (
+                <div className="border-t bg-white px-4 py-3">
                   <Header />
                 </div>
               )}
-
-              {/* Mobile Menu Button */}
-              {isMobile && (
-                <button
-                  type="button"
-                  aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-                  className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-md border border-gray-300 hover:bg-gray-50"
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                >
-                  {isMenuOpen ? <XIcon className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </button>
-              )}
-            </div>
-
-            {/* Mobile Menu Drawer */}
-            {isMobile && isMenuOpen && (
-              <div className="border-t bg-white px-4 py-3">
-                <Header />
-              </div>
-            )}
-          </header>
+            </header>
+          )}
 
           <main
             className="mx-auto w-full flex-1 overflow-auto"
             style={{
-              height: "calc(100svh - 4rem)",
+              height: isEditorRoute ? "100svh" : "calc(100svh - 4rem)",
             }}
           >
             {children}

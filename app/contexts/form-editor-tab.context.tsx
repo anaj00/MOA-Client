@@ -34,21 +34,11 @@ interface FormEditorTabContextType {
   // Blocks array for backward compatibility
   blocks: IFormBlock[];
 
-  // UI state - expanded groups, drag state, search
-  expandedGroups: Set<string>;
-  toggleExpandedGroup: (groupKey: string) => void;
-  draggedGroupKey: string | null;
-  setDraggedGroupKey: (key: string | null) => void;
+  // UI state
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  showPhantomMenu: boolean;
-  setShowPhantomMenu: (show: boolean) => void;
-  showLibrary: boolean;
-  setShowLibrary: (show: boolean) => void;
-  previewValues: Record<string, any>;
-  setPreviewValues: (values: Record<string, any>) => void;
-  previewErrors: Record<string, string>;
-  setPreviewErrors: (errors: Record<string, string>) => void;
+  preferredPlacementPage: number;
+  setPreferredPlacementPage: (page: number) => void;
 
   // Handlers
   handleBlockSelect: (blockId: string) => void;
@@ -86,25 +76,8 @@ export function FormEditorTabProvider({ children }: { children: ReactNode }) {
   const [selectedBlockGroup, setSelectedBlockGroup] = useState<BlockGroup | null>(null);
 
   // UI state
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [draggedGroupKey, setDraggedGroupKey] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showPhantomMenu, setShowPhantomMenu] = useState(false);
-  const [showLibrary, setShowLibrary] = useState(false);
-  const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
-  const [previewErrors, setPreviewErrors] = useState<Record<string, string>>({});
-
-  const toggleExpandedGroup = useCallback((groupKey: string) => {
-    setExpandedGroups((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupKey)) {
-        newSet.delete(groupKey);
-      } else {
-        newSet.add(groupKey);
-      }
-      return newSet;
-    });
-  }, []);
+  const [preferredPlacementPage, setPreferredPlacementPage] = useState(1);
 
   // Expose blocks as array derived from blocksMap, or directly from formMetadata
   const blocks = useMemo(() => {
@@ -504,20 +477,10 @@ export function FormEditorTabProvider({ children }: { children: ReactNode }) {
     selectedBlockGroup,
     setSelectedBlockGroup,
     blocks,
-    expandedGroups,
-    toggleExpandedGroup,
-    draggedGroupKey,
-    setDraggedGroupKey,
     searchQuery,
     setSearchQuery,
-    showPhantomMenu,
-    setShowPhantomMenu,
-    showLibrary,
-    setShowLibrary,
-    previewValues,
-    setPreviewValues,
-    previewErrors,
-    setPreviewErrors,
+    preferredPlacementPage,
+    setPreferredPlacementPage,
     handleBlockSelect,
     handleParentGroupSelect,
     handleBlockUpdate,

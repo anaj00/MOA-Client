@@ -6,13 +6,9 @@ import { IFormBlock } from "@betterinternship/core/forms";
 import { useState, useEffect } from "react";
 import { useFormEditor } from "@/app/contexts/form-editor.context";
 import { useFormEditorTab } from "@/app/contexts/form-editor-tab.context";
-import {
-  FormInput,
-  FormTextarea,
-  FormDropdown,
-  FormCheckbox,
-} from "@/components/docs/forms/EditForm";
+import { FormInput, FormTextarea, FormDropdown } from "@/components/docs/forms/EditForm";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   BiAlignLeft,
   BiAlignMiddle,
@@ -21,9 +17,68 @@ import {
   BiVerticalCenter,
   BiVerticalTop,
 } from "react-icons/bi";
-import { BLOCK_TYPES, SOURCES } from "@betterinternship/core/forms";
+import { SOURCES } from "@betterinternship/core/forms";
 import { ValidatorBuilder } from "@/components/docs/form-editor/ValidatorBuilder";
 import { zodCodeToValidatorConfig, validatorConfigToZodCode } from "@/lib/validator-engine";
+import { getPartyColorByIndex } from "@/lib/party-colors";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
+
+function RecipientBadgeDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { id: string; name: string; order?: number }[];
+  onChange: (value: string) => void;
+}) {
+  const selected = options.find((option) => option.id === value) || options[0];
+  const selectedColor = getPartyColorByIndex(Math.max(0, (selected?.order || 1) - 1));
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex h-8 w-full items-center justify-between rounded-[0.33em] border border-slate-300 bg-white px-2.5 text-sm"
+        >
+          <span
+            className="max-w-[calc(100%-1.5rem)] truncate rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+            style={{ backgroundColor: selectedColor.hex }}
+          >
+            {selected?.name || "Select recipient"}
+          </span>
+          <ChevronDown className="h-4 w-4 text-slate-500" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={6}
+        className="w-[var(--radix-dropdown-menu-trigger-width)]"
+      >
+        {options.map((option) => {
+          const color = getPartyColorByIndex(Math.max(0, (option.order || 1) - 1));
+          return (
+            <DropdownMenuItem key={option.id} onClick={() => onChange(option.id)} className="py-1.5">
+              <span
+                className="max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                style={{ backgroundColor: color.hex }}
+              >
+                {option.name}
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function RevampedBlockEditor() {
   const { formMetadata } = useFormEditor();
@@ -187,15 +242,7 @@ export function RevampedBlockEditor() {
 
     return (
       <div className="flex h-full flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-card flex items-center justify-between border-b p-3.5">
-          <div>
-            <h3 className="text-sm font-semibold">Block Properties</h3>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 space-y-4 overflow-auto p-4">
+        <div className="flex-1 space-y-3 overflow-auto p-3">
           {/* Text Content - for header, paragraph, phantom_field */}
           {isSimpleBlock && (
             <FormTextarea
@@ -219,129 +266,46 @@ export function RevampedBlockEditor() {
             />
           )}
 
-          {/* Field Name - for form_field blocks */}
-          {!isSimpleBlock && (
-            <FormInput
-              label="Field Name"
+          <Card className="gap-2 p-2.5">
+            <h4 className="text-muted-foreground text-xs font-semibold">Recipient</h4>
+            <RecipientBadgeDropdown
               value={
-                editingValues.fieldName !== undefined
-                  ? editingValues.fieldName
-                  : fieldMetadata?.field || ""
+                (editingValues.signingPartyId !== undefined
+                  ? editingValues.signingPartyId
+                  : parentGroup.partyId) || ""
               }
-              setter={(value) => {
-                // Immediate local state update for responsive typing
-                setEditingValues((prev) => ({ ...prev, fieldName: value }));
-                // Push to formMetadata - use parentGroup.id as the groupId
+              options={(formMetadata?.signing_parties || []).map((party, idx) => ({
+                id: party._id,
+                name: party.signatory_title || party._id,
+                order: idx + 1,
+              }))}
+              onChange={(value) => {
+                setEditingValues((prev) => ({ ...prev, signingPartyId: value }));
                 if (parentGroup) {
-                  handleParentUpdate(parentGroup.id, { fieldName: value });
+                  handleParentUpdate(parentGroup.id, { signing_party_id: value });
                 }
               }}
-              placeholder="e.g., full_name"
-              required={false}
             />
-          )}
+          </Card>
 
-          {/* Block Type - always shown */}
-          <FormDropdown
-            label="Block Type"
-            value={editingValues.blockType !== undefined ? editingValues.blockType : blockType}
-            options={Array.from(
-              new Set([
-                ...BLOCK_TYPES,
-                blockType, // always include the current blockType
-              ])
-            ).map((type) => ({
-              id: type,
-              name:
-                type === "form_phantom_field"
-                  ? "Form Phantom Field"
-                  : type
-                      .split("_")
-                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(" "),
-            }))}
-            setter={(value) => {
-              setEditingValues((prev) => ({ ...prev, blockType: value }));
-              if (parentGroup) {
-                handleParentUpdate(parentGroup.id, { block_type: value });
-              }
-            }}
-            required={false}
-          />
-
-          {/* Signing Party - always shown */}
-          <FormDropdown
-            label="Signing Party"
-            value={
-              editingValues.signingPartyId !== undefined
-                ? editingValues.signingPartyId
-                : parentGroup.partyId
-            }
-            options={(formMetadata?.signing_parties || []).map((party, idx) => ({
-              id: party._id,
-              name: party.signatory_title || party._id,
-              order: idx,
-            }))}
-            setter={(value) => {
-              // Immediate local state update
-              setEditingValues((prev) => ({ ...prev, signingPartyId: value }));
-              // Push to formMetadata
-              if (parentGroup) {
-                handleParentUpdate(parentGroup.id, { signing_party_id: value });
-              }
-            }}
-            required={false}
-          />
-
-          {/* Form field specific properties */}
+          {/* Field settings */}
           {!isSimpleBlock && fieldMetadata && (
-            <>
+            <Card className="gap-2.5 p-2.5">
+              <h4 className="text-muted-foreground text-xs font-semibold">Field settings</h4>
               <FormInput
-                label="Label"
+                label="Field Name"
                 value={
-                  editingValues.label !== undefined
-                    ? editingValues.label
-                    : fieldMetadata.label || ""
+                  editingValues.fieldName !== undefined
+                    ? editingValues.fieldName
+                    : fieldMetadata.field || ""
                 }
                 setter={(value) => {
-                  console.log("[RevampedBlockEditor] Label changed:", {
-                    value,
-                    parentGroup,
-                    selectedBlockId,
-                  });
-                  // Immediate local state update for responsive typing
-                  setEditingValues((prev) => ({ ...prev, label: value }));
-                  // Push to formMetadata - use parentGroup.id as the groupId
+                  setEditingValues((prev) => ({ ...prev, fieldName: value }));
                   if (parentGroup) {
-                    handleParentUpdate(parentGroup.id, { label: value });
+                    handleParentUpdate(parentGroup.id, { fieldName: value });
                   }
                 }}
-                placeholder="Display label for users"
-                required={false}
-              />
-
-              <FormDropdown
-                label="Type"
-                value={
-                  editingValues.type !== undefined
-                    ? editingValues.type
-                    : fieldMetadata.type || "text"
-                }
-                options={[
-                  { id: "text", name: "Text" },
-                  { id: "signature", name: "Signature" },
-                  { id: "date", name: "Date" },
-                  { id: "number", name: "Number" },
-                  { id: "checkbox", name: "Checkbox" },
-                  { id: "select", name: "Select" },
-                  { id: "textarea", name: "Textarea" },
-                ]}
-                setter={(value) => {
-                  setEditingValues((prev) => ({ ...prev, type: value }));
-                  if (parentGroup) {
-                    handleParentUpdate(parentGroup.id, { type: value });
-                  }
-                }}
+                placeholder="e.g., full_name"
                 required={false}
               />
 
@@ -365,41 +329,8 @@ export function RevampedBlockEditor() {
                 required={false}
               />
 
-              <FormTextarea
-                label="Tooltip Label"
-                value={
-                  editingValues.tooltipLabel !== undefined
-                    ? editingValues.tooltipLabel
-                    : fieldMetadata.tooltip_label || ""
-                }
-                setter={(value) => {
-                  setEditingValues((prev) => ({ ...prev, tooltipLabel: value }));
-                  if (parentGroup) {
-                    handleParentUpdate(parentGroup.id, { tooltip_label: value });
-                  }
-                }}
-                placeholder="Help text for field"
-                required={false}
-              />
-
-              <FormCheckbox
-                label="Shared Field"
-                checked={
-                  editingValues.shared !== undefined
-                    ? editingValues.shared
-                    : fieldMetadata.shared || false
-                }
-                setter={(checked: boolean) => {
-                  setEditingValues((prev) => ({ ...prev, shared: checked }));
-                  if (parentGroup) {
-                    handleParentUpdate(parentGroup.id, { shared: checked });
-                  }
-                }}
-                required={false}
-              />
-
               <div className="space-y-2">
-                <h4 className="text-xs text-gray-600">Prefiller (JS Function)</h4>
+                <h4 className="text-xs text-gray-600">Default value</h4>
                 <FormTextarea
                   value={
                     editingValues.prefiller !== undefined
@@ -412,9 +343,13 @@ export function RevampedBlockEditor() {
                       handleParentUpdate(parentGroup.id, { prefiller: value });
                     }
                   }}
-                  placeholder="Optional JavaScript function to prefill this field"
+                  placeholder='() => "Sample Value"'
                   required={false}
                 />
+                <p className="text-xs text-slate-500">
+                  Use <span className="font-mono">() =&gt; "value"</span> or{" "}
+                  <span className="font-mono">() =&gt; &#123; return #&#123;field_name&#125;; &#125;</span>
+                </p>
               </div>
 
               <ValidatorBuilder
@@ -436,7 +371,7 @@ export function RevampedBlockEditor() {
                   }
                 }}
               />
-            </>
+            </Card>
           )}
         </div>
       </div>
@@ -456,137 +391,167 @@ export function RevampedBlockEditor() {
   // Child/Instance editing - Show PDF-level properties (coordinates, alignment, font size, wrap)
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-card flex items-center justify-between border-b p-3.5">
-        <div>
-          <h3 className="text-sm font-semibold">Position & Layout</h3>
-        </div>
-      </div>
+      <div className="flex-1 space-y-3 overflow-auto p-3">
+        <Card className="gap-2 p-2.5">
+          <h4 className="text-muted-foreground text-xs font-semibold">Recipient</h4>
+          <RecipientBadgeDropdown
+            value={editedBlock.signing_party_id || ""}
+            options={(formMetadata?.signing_parties || []).map((party, idx) => ({
+              id: party._id,
+              name: party.signatory_title || party._id,
+              order: idx + 1,
+            }))}
+            onChange={(value) => {
+              const updatedBlock = { ...editedBlock, signing_party_id: value };
+              setEditedBlock(updatedBlock);
+              handleBlockUpdate(updatedBlock);
+            }}
+          />
+        </Card>
 
-      {/* Content */}
-      <div className="flex-1 space-y-4 overflow-auto p-4">
-        {/* Coordinates Section */}
-        <div className="space-y-2">
-          <h4 className="text-muted-foreground text-xs font-semibold">Coordinates</h4>
-          <FormInput
-            label="X"
-            type="number"
-            value={String((schema?.x || 0).toFixed(1))}
-            setter={(value) => handleFieldChange("x", parseFloat(value))}
-          />
-          <FormInput
-            label="Y"
-            type="number"
-            value={String((schema?.y || 0).toFixed(1))}
-            setter={(value) => handleFieldChange("y", parseFloat(value))}
-          />
-        </div>
+        <Card className="gap-2.5 p-2.5">
+          <h4 className="text-muted-foreground text-xs font-semibold">Position & Layout</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <FormInput
+              label="X"
+              type="number"
+              value={String((schema?.x || 0).toFixed(1))}
+              setter={(value) => handleFieldChange("x", parseFloat(value))}
+            />
+            <FormInput
+              label="Y"
+              type="number"
+              value={String((schema?.y || 0).toFixed(1))}
+              setter={(value) => handleFieldChange("y", parseFloat(value))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <FormInput
+              label="Width"
+              type="number"
+              value={String((schema?.w || 100).toFixed(1))}
+              setter={(value) => handleFieldChange("w", parseFloat(value))}
+            />
+            <FormInput
+              label="Height"
+              type="number"
+              value={String((schema?.h || 20).toFixed(1))}
+              setter={(value) => handleFieldChange("h", parseFloat(value))}
+            />
+          </div>
+        </Card>
 
-        {/* Size Section */}
-        <div className="space-y-2">
-          <h4 className="text-muted-foreground text-xs font-semibold">Size</h4>
-          <FormInput
-            label="Width"
-            type="number"
-            value={String((schema?.w || 100).toFixed(1))}
-            setter={(value) => handleFieldChange("w", parseFloat(value))}
-          />
-          <FormInput
-            label="Height"
-            type="number"
-            value={String((schema?.h || 20).toFixed(1))}
-            setter={(value) => handleFieldChange("h", parseFloat(value))}
-          />
-        </div>
+        <Card className="gap-2.5 p-2.5">
+          <h4 className="text-muted-foreground text-xs font-semibold">Text Alignment</h4>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-600">Horizontal</p>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant={schema?.horizontal_alignment === "left" ? "default" : "outline"}
+                onClick={() => handleFieldChange("horizontal_alignment", "left")}
+                title="Align Left"
+                className="h-8 flex-1"
+              >
+                <BiAlignLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant={schema?.horizontal_alignment === "center" ? "default" : "outline"}
+                onClick={() => handleFieldChange("horizontal_alignment", "center")}
+                title="Align Center"
+                className="h-8 flex-1"
+              >
+                <BiAlignMiddle className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant={schema?.horizontal_alignment === "right" ? "default" : "outline"}
+                onClick={() => handleFieldChange("horizontal_alignment", "right")}
+                title="Align Right"
+                className="h-8 flex-1"
+              >
+                <BiAlignRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-600">Vertical</p>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant={schema?.vertical_alignment === "top" ? "default" : "outline"}
+                onClick={() => handleFieldChange("vertical_alignment", "top")}
+                title="Align Top"
+                className="h-8 flex-1"
+              >
+                <BiVerticalTop className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant={schema?.vertical_alignment === "middle" ? "default" : "outline"}
+                onClick={() => handleFieldChange("vertical_alignment", "middle")}
+                title="Align Middle"
+                className="h-8 flex-1"
+              >
+                <BiVerticalCenter className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant={schema?.vertical_alignment === "bottom" ? "default" : "outline"}
+                onClick={() => handleFieldChange("vertical_alignment", "bottom")}
+                title="Align Bottom"
+                className="h-8 flex-1"
+              >
+                <BiVerticalBottom className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
 
-        {/* Typography Section */}
-        <div className="space-y-2">
-          <h4 className="text-muted-foreground text-xs font-semibold">Typography & Text</h4>
+        <Card className="gap-2.5 p-2.5">
+          <h4 className="text-muted-foreground text-xs font-semibold">Field settings</h4>
           <FormInput
-            label="Font Size"
-            type="number"
-            value={String((schema?.font_size || 12).toFixed(1))}
-            setter={(value) => handleFieldChange("font_size", parseFloat(value))}
+            label="Field Name"
+            value={schema?.field || ""}
+            setter={(value) => handleFieldChange("field", value)}
+            required={false}
           />
           <FormDropdown
-            label="Text Wrapping"
-            value={schema?.text_wrapping ? "wrap" : "no-wrap"}
-            options={[
-              { id: "no-wrap", name: "No Wrap" },
-              { id: "wrap", name: "Wrap" },
-            ]}
-            setter={(value) => handleFieldChange("text_wrapping", value === "wrap")}
+            label="Source"
+            value={schema?.source || "manual"}
+            options={SOURCES.map((source) => ({
+              id: source,
+              name: source.charAt(0).toUpperCase() + source.slice(1),
+            }))}
+            setter={(value) => handleFieldChange("source", value)}
+            required={false}
           />
-        </div>
-
-        {/* Alignment Section */}
-        <div className="space-y-2">
-          <h4 className="text-muted-foreground text-xs font-semibold">Alignment</h4>
-          {/* Horizontal Alignment */}
-          <div className="flex flex-1 gap-1">
-            <Button
-              size="sm"
-              variant={schema?.horizontal_alignment === "left" ? "default" : "outline"}
-              onClick={() => handleFieldChange("horizontal_alignment", "left")}
-              title="Align Left"
-              className="h-8 flex-1"
-            >
-              <BiAlignLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={schema?.horizontal_alignment === "center" ? "default" : "outline"}
-              onClick={() => handleFieldChange("horizontal_alignment", "center")}
-              title="Align Center"
-              className="h-8 flex-1"
-            >
-              <BiAlignMiddle className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={schema?.horizontal_alignment === "right" ? "default" : "outline"}
-              onClick={() => handleFieldChange("horizontal_alignment", "right")}
-              title="Align Right"
-              className="h-8 flex-1"
-            >
-              <BiAlignRight className="h-4 w-4" />
-            </Button>
+          <div className="space-y-2">
+            <h4 className="text-xs text-gray-600">Default value</h4>
+            <FormTextarea
+              value={schema?.prefiller || ""}
+              setter={(value) => handleFieldChange("prefiller", value)}
+              placeholder='() => "Sample Value"'
+              required={false}
+            />
+            <p className="text-xs text-slate-500">
+              Use <span className="font-mono">() =&gt; "value"</span> or{" "}
+              <span className="font-mono">() =&gt; &#123; return #&#123;field_name&#125;; &#125;</span>
+            </p>
           </div>
-
-          {/* Vertical Alignment */}
-          <div className="flex flex-1 gap-1">
-            <Button
-              size="sm"
-              variant={schema?.vertical_alignment === "top" ? "default" : "outline"}
-              onClick={() => handleFieldChange("vertical_alignment", "top")}
-              title="Align Top"
-              className="h-8 flex-1"
-            >
-              <BiVerticalTop className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={schema?.vertical_alignment === "middle" ? "default" : "outline"}
-              onClick={() => handleFieldChange("vertical_alignment", "middle")}
-              title="Align Middle"
-              className="h-8 flex-1"
-            >
-              <BiVerticalCenter className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={schema?.vertical_alignment === "bottom" ? "default" : "outline"}
-              onClick={() => handleFieldChange("vertical_alignment", "bottom")}
-              title="Align Bottom"
-              className="h-8 flex-1"
-            >
-              <BiVerticalBottom className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Text Options */}
-        <div className="space-y-2"></div>
+          <ValidatorBuilder
+            config={schema?.validator ? zodCodeToValidatorConfig(schema.validator) : { rules: [] }}
+            rawZodCode={schema?.validator || ""}
+            onConfigChange={(newConfig) => {
+              const zodCode = validatorConfigToZodCode(newConfig);
+              handleFieldChange("validator", zodCode);
+            }}
+            onRawZodChange={(zodCode) => {
+              handleFieldChange("validator", zodCode);
+            }}
+          />
+        </Card>
       </div>
     </div>
   );

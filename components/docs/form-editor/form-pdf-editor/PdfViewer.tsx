@@ -48,6 +48,7 @@ export function PdfViewer() {
     handleFieldSelectFromPdf,
     handleBlockCreate,
     handleBlockUpdate,
+    setPreferredPlacementPage,
   } = useFormEditorTab();
 
   const { formMetadata } = useFormEditor();
@@ -90,11 +91,40 @@ export function PdfViewer() {
     () => Array.from({ length: pageCount }, (_, idx) => idx + 1),
     [pageCount]
   );
+
+  useEffect(() => {
+    setPreferredPlacementPage(visiblePage);
+  }, [visiblePage, setPreferredPlacementPage]);
   const pageRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
   const pdfContainerRef = useRef<HTMLDivElement | null>(null);
   const registerPageRef = useCallback((page: number, node: HTMLDivElement | null) => {
     pageRefs.current.set(page, node);
   }, []);
+
+  const handlePdfScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const containerRect = e.currentTarget.getBoundingClientRect();
+      const anchorY = containerRect.top + 24;
+      let closestPage = visiblePage;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      for (const page of pagesArray) {
+        const node = pageRefs.current.get(page);
+        if (!node) continue;
+        const rect = node.getBoundingClientRect();
+        const distance = Math.abs(rect.top - anchorY);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestPage = page;
+        }
+      }
+
+      if (closestPage !== visiblePage) {
+        setVisiblePage(closestPage);
+      }
+    },
+    [pagesArray, setVisiblePage, visiblePage]
+  );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -265,6 +295,7 @@ export function PdfViewer() {
           <div
             className="h-full overflow-auto p-4"
             aria-live="polite"
+            onScroll={handlePdfScroll}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
