@@ -83,7 +83,7 @@ function RecipientBadgeDropdown({
 
 export function RevampedBlockEditor() {
   const { formMetadata } = useFormEditor();
-  const { selectedBlockId, selectedBlockGroup, handleBlockUpdate, handleParentUpdate } =
+  const { selectedBlockId, selectedBlockGroup, handleBlockUpdate, handleParentUpdate, editorViewMode } =
     useFormEditorTab();
 
   // Get the selected block and parent group from context
@@ -188,6 +188,14 @@ export function RevampedBlockEditor() {
     return (
       <div className="flex h-full items-center justify-center p-4">
         <p className="text-muted-foreground text-sm">Select a field to edit</p>
+      </div>
+    );
+  }
+
+  if (editorViewMode === "form" && editedBlock && !parentGroup) {
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <p className="text-muted-foreground text-sm">Select a row from Form View to edit settings</p>
       </div>
     );
   }

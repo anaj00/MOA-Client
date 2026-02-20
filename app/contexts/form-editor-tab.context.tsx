@@ -13,11 +13,22 @@ import { IFormBlock } from "@betterinternship/core/forms";
 import { normalizeBlockForSave } from "@/lib/form-schema-normalizer";
 import { useFormEditor } from "./form-editor.context";
 
-interface BlockGroup {
+export interface BlockGroup {
   id: string;
   fieldName: string;
   partyId: string;
   blockIds: string[]; // ordered list of block IDs in this group
+}
+
+export type EditorViewMode = "pdf" | "form";
+
+export interface FormViewUnit {
+  id: string;
+  kind: "field" | "header" | "paragraph";
+  label: string;
+  partyId: string;
+  blockIds: string[];
+  primaryBlockId: string;
 }
 
 type ParentPatch = Record<string, any>;
@@ -96,6 +107,9 @@ interface FormEditorTabContextType {
   setSearchQuery: (query: string) => void;
   preferredPlacementPage: number;
   setPreferredPlacementPage: (page: number) => void;
+  editorViewMode: EditorViewMode;
+  setEditorViewMode: (mode: EditorViewMode) => void;
+  formViewUnits: FormViewUnit[];
 
   // Handlers
   handleBlockSelect: (blockId: string) => void;
@@ -116,6 +130,9 @@ interface FormEditorTabContextType {
     selectedPartyId: string,
     customBlock?: IFormBlock
   ) => void;
+  handleSelectFormViewUnit: (unitId: string) => void;
+  handleReorderFormViewUnits: (nextUnitIds: string[]) => void;
+  handleAddFormTextBlock: (type: "header" | "paragraph") => void;
 }
 
 const FormEditorTabContext = createContext<FormEditorTabContextType | undefined>(undefined);
@@ -135,6 +152,7 @@ export function FormEditorTabProvider({ children }: { children: ReactNode }) {
   // UI state
   const [searchQuery, setSearchQuery] = useState("");
   const [preferredPlacementPage, setPreferredPlacementPage] = useState(1);
+  const [editorViewMode, setEditorViewMode] = useState<EditorViewMode>("pdf");
 
   // Expose blocks as array derived from blocksMap, or directly from formMetadata
   const blocks = useMemo(() => {
@@ -149,6 +167,59 @@ export function FormEditorTabProvider({ children }: { children: ReactNode }) {
     });
     return map;
   }, [blocks]);
+
+  const activePartyId = useMemo(() => {
+    return selectedPartyId || formMetadata?.signing_parties?.[0]?._id || "";
+  }, [formMetadata?.signing_parties, selectedPartyId]);
+
+  const formViewUnits = useMemo<FormViewUnit[]>(() => {
+    if (!activePartyId) return [];
+
+    const units: FormViewUnit[] = [];
+    const fieldUnits = new Map<string, FormViewUnit>();
+
+    blocks.forEach((block) => {
+      if ((block.signing_party_id || "") !== activePartyId) return;
+
+      if (block.block_type === "header" || block.block_type === "paragraph") {
+        units.push({
+          id: block._id,
+          kind: block.block_type,
+          label:
+            (block.text_content || "").trim() ||
+            (block.block_type === "header" ? "Header" : "Paragraph"),
+          partyId: activePartyId,
+          blockIds: [block._id],
+          primaryBlockId: block._id,
+        });
+        return;
+      }
+
+      const schema = block.field_schema || block.phantom_field_schema;
+      const fieldName = schema?.field;
+      if (!fieldName) return;
+
+      const groupId = `${fieldName}-${activePartyId}-${block.block_type}`;
+      const existing = fieldUnits.get(groupId);
+      if (existing) {
+        existing.blockIds.push(block._id);
+        return;
+      }
+
+      const unit: FormViewUnit = {
+        id: groupId,
+        kind: "field",
+        label: schema?.label || fieldName,
+        partyId: activePartyId,
+        blockIds: [block._id],
+        primaryBlockId: block._id,
+      };
+      fieldUnits.set(groupId, unit);
+      units.push(unit);
+    });
+
+    return units;
+  }, [activePartyId, blocks]);
 
   // Initialize normalized state from blocks
   useEffect(() => {
@@ -484,6 +555,97 @@ export function FormEditorTabProvider({ children }: { children: ReactNode }) {
     [blocks, updateBlocks]
   );
 
+  const handleSelectFormViewUnit = useCallback(
+    (unitId: string) => {
+      const group = blockGroups[unitId];
+      if (group) {
+        setSelectedBlockId(null);
+        setSelectedFieldId(null);
+        setSelectedBlockGroup(group);
+        return;
+      }
+
+      const unit = formViewUnits.find((u) => u.id === unitId);
+      if (!unit) return;
+
+      setSelectedBlockId(null);
+      setSelectedFieldId(null);
+      setSelectedBlockGroup({
+        id: unit.id,
+        fieldName:
+          unit.kind === "field"
+            ? blocks.find((b) => b._id === unit.primaryBlockId)?.field_schema?.field ||
+              blocks.find((b) => b._id === unit.primaryBlockId)?.phantom_field_schema?.field ||
+              unit.label
+            : unit.kind,
+        partyId: unit.partyId || "unknown",
+        blockIds: unit.blockIds,
+      });
+    },
+    [blockGroups, blocks, formViewUnits]
+  );
+
+  const handleReorderFormViewUnits = useCallback(
+    (nextUnitIds: string[]) => {
+      if (!formMetadata || !activePartyId) return;
+      if (nextUnitIds.length === 0) return;
+
+      const unitsMap = new Map(formViewUnits.map((unit) => [unit.id, unit]));
+      const orderedUnits = nextUnitIds
+        .map((id) => unitsMap.get(id))
+        .filter(Boolean) as FormViewUnit[];
+      if (orderedUnits.length === 0) return;
+
+      const orderedBlockIds = orderedUnits.flatMap((unit) => unit.blockIds);
+      const idToBlock = new Map(blocks.map((block) => [block._id, block]));
+      const replacementBlocks = orderedBlockIds
+        .map((blockId) => idToBlock.get(blockId))
+        .filter(Boolean) as IFormBlock[];
+      const replacementSet = new Set(orderedBlockIds);
+
+      let replacementIndex = 0;
+      const reorderedBlocks = blocks.map((block) => {
+        if (!replacementSet.has(block._id)) return block;
+        const replacement = replacementBlocks[replacementIndex];
+        replacementIndex += 1;
+        return replacement || block;
+      });
+
+      const blocksWithOrder = reorderedBlocks.map((block, index) => ({
+        ...block,
+        order: index,
+      }));
+      updateBlocks(blocksWithOrder);
+    },
+    [activePartyId, blocks, formMetadata, formViewUnits, updateBlocks]
+  );
+
+  const handleAddFormTextBlock = useCallback(
+    (type: "header" | "paragraph") => {
+      const partyId = activePartyId;
+      if (!partyId) return;
+
+      const newBlock: IFormBlock = {
+        _id: `${type}-${Date.now()}`,
+        block_type: type,
+        signing_party_id: partyId,
+        order: blocks.length,
+        text_content: type === "header" ? "New Header" : "New Paragraph",
+      } as IFormBlock;
+
+      updateBlocks([...blocks, newBlock]);
+      setSelectedBlockId(null);
+      setSelectedFieldId(null);
+      setSelectedBlockGroup({
+        id: newBlock._id,
+        fieldName: type,
+        partyId: partyId || "unknown",
+        blockIds: [newBlock._id],
+      });
+    },
+    [activePartyId, blocks, updateBlocks]
+  );
+
   const value: FormEditorTabContextType = {
     selectedPartyId,
     setSelectedPartyId,
@@ -501,6 +663,9 @@ export function FormEditorTabProvider({ children }: { children: ReactNode }) {
     setSearchQuery,
     preferredPlacementPage,
     setPreferredPlacementPage,
+    editorViewMode,
+    setEditorViewMode,
+    formViewUnits,
     handleBlockSelect,
     handleParentGroupSelect,
     handleBlockUpdate,
@@ -513,6 +678,9 @@ export function FormEditorTabProvider({ children }: { children: ReactNode }) {
     handleReorderBlocks,
     handleReorderBlock,
     handleAddPhantomBlock,
+    handleSelectFormViewUnit,
+    handleReorderFormViewUnits,
+    handleAddFormTextBlock,
   };
 
   return <FormEditorTabContext.Provider value={value}>{children}</FormEditorTabContext.Provider>;

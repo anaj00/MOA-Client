@@ -21,7 +21,9 @@ import { useFormEditorTab } from "@/app/contexts/form-editor-tab.context";
 import { useFormEditor } from "@/app/contexts/form-editor.context";
 import { usePdfViewer } from "@/app/contexts/pdf-viewer.context";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { IFormBlock, IFormMetadata } from "@betterinternship/core/forms";
+import { FormViewBlocksPanel } from "@/components/editor/tab-panels/editor-components/FormViewBlocksPanel";
 
 export type PointerLocation = {
   page: number;
@@ -49,6 +51,8 @@ export function PdfViewer() {
     handleBlockCreate,
     handleBlockUpdate,
     setPreferredPlacementPage,
+    editorViewMode,
+    setEditorViewMode,
   } = useFormEditorTab();
 
   const { formMetadata } = useFormEditor();
@@ -249,9 +253,17 @@ export function PdfViewer() {
       {/* Header */}
       <div className="flex-shrink-0 border-b bg-white px-4 py-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1"></div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-slate-600">Form View</span>
+            <Switch
+              checked={editorViewMode === "form"}
+              onCheckedChange={(checked) => setEditorViewMode(checked ? "form" : "pdf")}
+              aria-label="Toggle Form View"
+            />
+          </div>
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={() => handleZoom("out")}
               disabled={scale <= 0.5}
               className="rounded p-2 text-sm transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
@@ -262,6 +274,7 @@ export function PdfViewer() {
               {Math.round(scale * 100)}%
             </span>
             <button
+              type="button"
               onClick={() => handleZoom("in")}
               disabled={scale >= 3}
               className="rounded p-2 text-sm transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
@@ -269,20 +282,28 @@ export function PdfViewer() {
               <ZoomIn className="h-4 w-4" />
             </button>
           </div>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-sm transition-colors hover:bg-slate-100">
-            <FileUp className="h-4 w-4" />
-            <input
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </label>
+          {editorViewMode === "pdf" ? (
+            <label className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-sm transition-colors hover:bg-slate-100">
+              <FileUp className="h-4 w-4" />
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </label>
+          ) : (
+            <div className="w-[34px]" />
+          )}
         </div>
       </div>
 
-      {/* PDF Canvas */}
+      {/* PDF Canvas / Form View */}
       <div ref={pdfContainerRef} className="relative flex-1 overflow-hidden bg-white">
+        {editorViewMode === "form" ? (
+          <FormViewBlocksPanel signingParties={formMetadata?.signing_parties || []} />
+        ) : (
+          <>
         {isLoadingDoc && (
           <div className="bg-background/70 absolute inset-0 z-10 flex items-center justify-center">
             <Loader>Loading PDF…</Loader>
@@ -364,6 +385,8 @@ export function PdfViewer() {
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
