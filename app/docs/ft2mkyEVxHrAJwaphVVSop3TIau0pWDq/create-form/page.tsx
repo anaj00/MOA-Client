@@ -7,7 +7,7 @@ import { Loader2, Upload, Check } from "lucide-react";
 import { toast } from "sonner";
 import { FormInput } from "@/components/docs/forms/EditForm";
 import { PartiesPanel } from "@/components/docs/form-editor/form-layout/PartiesPanel";
-import { IFormSigningParty, IFormMetadata } from "@betterinternship/core/forms";
+import { IFormSigningParty, IFormMetadata, SCHEMA_VERSION } from "@betterinternship/core/forms";
 import { formsControllerRegisterForm } from "@/app/api";
 import { Card } from "@/components/ui/card";
 import { HeaderIcon, HeaderText } from "@/components/ui/text";
@@ -70,7 +70,7 @@ const CreateFormPage = () => {
       const formMetadata: IFormMetadata = {
         name: formName,
         label: formLabel,
-        schema_version: 1,
+        schema_version: SCHEMA_VERSION,
         schema: { blocks: [] },
         signing_parties: signingParties,
         subscribers: [],

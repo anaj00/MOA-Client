@@ -5,51 +5,44 @@ import { Button } from "@/components/ui/button";
 import { Copy, Download, Edit2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { toastPresets } from "@/components/sonner-toaster";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import type { IFormMetadata } from "@betterinternship/core/forms";
+import { SCHEMA_VERSION } from "@betterinternship/core/forms";
 
-// Helper function to compute order values from blocks array
-const computeBlockOrder = (metadata: IFormMetadata): IFormMetadata => {
-  const blocksWithOrder = metadata.schema.blocks.map((block, index) => ({
-    ...block,
-    order: index,
-  }));
-  return {
-    ...metadata,
-    schema: {
-      ...metadata.schema,
-      blocks: blocksWithOrder,
-    },
-  };
-};
+const sanitizeMetadata = (metadata: IFormMetadata): IFormMetadata => ({
+  name: metadata.name,
+  label: metadata.label,
+  schema_version: SCHEMA_VERSION,
+  schema: {
+    blocks: metadata.schema?.blocks || [],
+  },
+  signing_parties: metadata.signing_parties || [],
+  subscribers: metadata.subscribers || [],
+});
 
 export function FormMetadataTab() {
   const { formMetadata, setFormMetadata } = useFormEditor();
   const [isEditing, setIsEditing] = useState(false);
   const [editedMetadata, setEditedMetadata] = useState<string>("");
 
-  // Compute order values whenever viewing metadata
-  const metadataWithOrder = useMemo(() => {
-    if (!formMetadata) return null;
-    return computeBlockOrder(formMetadata);
-  }, [formMetadata]);
+  const metadataView = formMetadata ? sanitizeMetadata(formMetadata) : null;
 
   const handleCopyMetadata = () => {
-    if (metadataWithOrder) {
-      navigator.clipboard.writeText(JSON.stringify(metadataWithOrder, null, 2));
+    if (metadataView) {
+      navigator.clipboard.writeText(JSON.stringify(metadataView, null, 2));
       toast.success("Metadata copied to clipboard!", toastPresets.success);
     }
   };
 
   const handleDownloadMetadata = () => {
-    if (metadataWithOrder) {
+    if (metadataView) {
       const element = document.createElement("a");
-      const file = new Blob([JSON.stringify(metadataWithOrder, null, 2)], {
+      const file = new Blob([JSON.stringify(metadataView, null, 2)], {
         type: "application/json",
       });
       element.href = URL.createObjectURL(file);
-      element.download = `${metadataWithOrder.name}-metadata.json`;
+      element.download = `${metadataView.name}-metadata.json`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
@@ -58,16 +51,16 @@ export function FormMetadataTab() {
   };
 
   const handleStartEdit = () => {
-    if (metadataWithOrder) {
-      setEditedMetadata(JSON.stringify(metadataWithOrder, null, 2));
+    if (metadataView) {
+      setEditedMetadata(JSON.stringify(metadataView, null, 2));
       setIsEditing(true);
     }
   };
 
   const handleSaveEdit = () => {
     try {
-      const parsed = JSON.parse(editedMetadata);
-      setFormMetadata(parsed);
+      const parsed = JSON.parse(editedMetadata) as IFormMetadata;
+      setFormMetadata(sanitizeMetadata(parsed));
       setIsEditing(false);
       toast.success("Metadata updated!", toastPresets.success);
     } catch (error) {
@@ -131,7 +124,7 @@ export function FormMetadataTab() {
 
         {!isEditing ? (
           <div className="bg-muted overflow-x-auto rounded-lg border p-4 font-mono text-xs">
-            <pre>{JSON.stringify(metadataWithOrder, null, 2)}</pre>
+            <pre>{JSON.stringify(metadataView, null, 2)}</pre>
           </div>
         ) : (
           <Textarea

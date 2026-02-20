@@ -27,7 +27,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
+import { validateExpression } from "@/lib/expression-validator";
 
 function RecipientBadgeDropdown({
   value,
@@ -140,6 +141,9 @@ export function RevampedBlockEditor() {
     setEditingValues({});
   }, [parentGroup?.id]);
 
+  const getSource = (schema: any) => (schema?.source as string) || "manual";
+  const isDefaultValueLocked = (source: string) => source === "auto" || source === "prefill";
+
   const handleFieldChange = (key: string, value: any) => {
     if (!editedBlock || !formMetadata) return;
 
@@ -153,10 +157,10 @@ export function RevampedBlockEditor() {
       key === "y" ||
       key === "w" ||
       key === "h" ||
-      key === "font_size" ||
-      key === "text_wrapping" ||
-      key === "horizontal_alignment" ||
-      key === "vertical_alignment"
+      key === "size" ||
+      key === "wrap" ||
+      key === "align_h" ||
+      key === "align_v"
     ) {
       // PDF editor fields
       if (editedBlock.field_schema) {
@@ -240,6 +244,14 @@ export function RevampedBlockEditor() {
       );
     }
 
+    const parentSource =
+      (editingValues.source !== undefined ? editingValues.source : fieldMetadata?.source) || "manual";
+    const parentPrefillerValue =
+      (editingValues.prefiller !== undefined
+        ? editingValues.prefiller
+        : fieldMetadata?.prefiller || "") as string;
+    const parentPrefillerValidation = validateExpression(parentPrefillerValue);
+
     return (
       <div className="flex h-full flex-col overflow-hidden">
         <div className="flex-1 space-y-3 overflow-auto p-3">
@@ -293,19 +305,19 @@ export function RevampedBlockEditor() {
             <Card className="gap-2.5 p-2.5">
               <h4 className="text-muted-foreground text-xs font-semibold">Field settings</h4>
               <FormInput
-                label="Field Name"
+                label="Field Label"
                 value={
-                  editingValues.fieldName !== undefined
-                    ? editingValues.fieldName
-                    : fieldMetadata.field || ""
+                  editingValues.fieldLabel !== undefined
+                    ? editingValues.fieldLabel
+                    : fieldMetadata.label || ""
                 }
                 setter={(value) => {
-                  setEditingValues((prev) => ({ ...prev, fieldName: value }));
+                  setEditingValues((prev) => ({ ...prev, fieldLabel: value }));
                   if (parentGroup) {
-                    handleParentUpdate(parentGroup.id, { fieldName: value });
+                    handleParentUpdate(parentGroup.id, { fieldLabel: value });
                   }
                 }}
-                placeholder="e.g., full_name"
+                placeholder="e.g., Full Name"
                 required={false}
               />
 
@@ -330,12 +342,18 @@ export function RevampedBlockEditor() {
               />
 
               <div className="space-y-2">
-                <h4 className="text-xs text-gray-600">Default value</h4>
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-xs text-gray-600">Default value</h4>
+                  {isDefaultValueLocked(getSource(fieldMetadata)) && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                      <Lock className="h-3 w-3" />
+                      Locked by source
+                    </span>
+                  )}
+                </div>
                 <FormTextarea
                   value={
-                    editingValues.prefiller !== undefined
-                      ? editingValues.prefiller
-                      : fieldMetadata.prefiller || ""
+                    parentPrefillerValue
                   }
                   setter={(value) => {
                     setEditingValues((prev) => ({ ...prev, prefiller: value }));
@@ -345,7 +363,13 @@ export function RevampedBlockEditor() {
                   }}
                   placeholder='() => "Sample Value"'
                   required={false}
+                  disabled={isDefaultValueLocked(parentSource)}
                 />
+                {!parentPrefillerValidation.valid && (
+                  <p className="text-xs text-red-600">
+                    {parentPrefillerValidation.message}
+                  </p>
+                )}
                 <p className="text-xs text-slate-500">
                   Use <span className="font-mono">() =&gt; "value"</span> or{" "}
                   <span className="font-mono">() =&gt; &#123; return #&#123;field_name&#125;; &#125;</span>
@@ -387,6 +411,7 @@ export function RevampedBlockEditor() {
   }
 
   const schema = (editedBlock.field_schema || editedBlock.phantom_field_schema) as any;
+  const childPrefillerValidation = validateExpression((schema?.prefiller || "") as string);
 
   // Child/Instance editing - Show PDF-level properties (coordinates, alignment, font size, wrap)
   return (
@@ -439,6 +464,29 @@ export function RevampedBlockEditor() {
               setter={(value) => handleFieldChange("h", parseFloat(value))}
             />
           </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-600">Text wrap</p>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant={(schema?.wrap ?? true) ? "default" : "outline"}
+                onClick={() => handleFieldChange("wrap", true)}
+                title="Wrap"
+                className="h-8 flex-1"
+              >
+                Wrap
+              </Button>
+              <Button
+                size="sm"
+                variant={(schema?.wrap ?? true) ? "outline" : "default"}
+                onClick={() => handleFieldChange("wrap", false)}
+                title="No wrap"
+                className="h-8 flex-1"
+              >
+                No wrap
+              </Button>
+            </div>
+          </div>
         </Card>
 
         <Card className="gap-2.5 p-2.5">
@@ -448,8 +496,8 @@ export function RevampedBlockEditor() {
             <div className="flex gap-1">
               <Button
                 size="sm"
-                variant={schema?.horizontal_alignment === "left" ? "default" : "outline"}
-                onClick={() => handleFieldChange("horizontal_alignment", "left")}
+                variant={(schema?.align_h || schema?.horizontal_alignment) === "left" ? "default" : "outline"}
+                onClick={() => handleFieldChange("align_h", "left")}
                 title="Align Left"
                 className="h-8 flex-1"
               >
@@ -457,8 +505,8 @@ export function RevampedBlockEditor() {
               </Button>
               <Button
                 size="sm"
-                variant={schema?.horizontal_alignment === "center" ? "default" : "outline"}
-                onClick={() => handleFieldChange("horizontal_alignment", "center")}
+                variant={(schema?.align_h || schema?.horizontal_alignment) === "center" ? "default" : "outline"}
+                onClick={() => handleFieldChange("align_h", "center")}
                 title="Align Center"
                 className="h-8 flex-1"
               >
@@ -466,8 +514,8 @@ export function RevampedBlockEditor() {
               </Button>
               <Button
                 size="sm"
-                variant={schema?.horizontal_alignment === "right" ? "default" : "outline"}
-                onClick={() => handleFieldChange("horizontal_alignment", "right")}
+                variant={(schema?.align_h || schema?.horizontal_alignment) === "right" ? "default" : "outline"}
+                onClick={() => handleFieldChange("align_h", "right")}
                 title="Align Right"
                 className="h-8 flex-1"
               >
@@ -480,8 +528,8 @@ export function RevampedBlockEditor() {
             <div className="flex gap-1">
               <Button
                 size="sm"
-                variant={schema?.vertical_alignment === "top" ? "default" : "outline"}
-                onClick={() => handleFieldChange("vertical_alignment", "top")}
+                variant={(schema?.align_v || schema?.vertical_alignment) === "top" ? "default" : "outline"}
+                onClick={() => handleFieldChange("align_v", "top")}
                 title="Align Top"
                 className="h-8 flex-1"
               >
@@ -489,8 +537,8 @@ export function RevampedBlockEditor() {
               </Button>
               <Button
                 size="sm"
-                variant={schema?.vertical_alignment === "middle" ? "default" : "outline"}
-                onClick={() => handleFieldChange("vertical_alignment", "middle")}
+                variant={(schema?.align_v || schema?.vertical_alignment) === "middle" ? "default" : "outline"}
+                onClick={() => handleFieldChange("align_v", "middle")}
                 title="Align Middle"
                 className="h-8 flex-1"
               >
@@ -498,8 +546,8 @@ export function RevampedBlockEditor() {
               </Button>
               <Button
                 size="sm"
-                variant={schema?.vertical_alignment === "bottom" ? "default" : "outline"}
-                onClick={() => handleFieldChange("vertical_alignment", "bottom")}
+                variant={(schema?.align_v || schema?.vertical_alignment) === "bottom" ? "default" : "outline"}
+                onClick={() => handleFieldChange("align_v", "bottom")}
                 title="Align Bottom"
                 className="h-8 flex-1"
               >
@@ -512,9 +560,9 @@ export function RevampedBlockEditor() {
         <Card className="gap-2.5 p-2.5">
           <h4 className="text-muted-foreground text-xs font-semibold">Field settings</h4>
           <FormInput
-            label="Field Name"
-            value={schema?.field || ""}
-            setter={(value) => handleFieldChange("field", value)}
+            label="Field Label"
+            value={schema?.label || ""}
+            setter={(value) => handleFieldChange("label", value)}
             required={false}
           />
           <FormDropdown
@@ -528,13 +576,27 @@ export function RevampedBlockEditor() {
             required={false}
           />
           <div className="space-y-2">
-            <h4 className="text-xs text-gray-600">Default value</h4>
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs text-gray-600">Default value</h4>
+              {isDefaultValueLocked(getSource(schema)) && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                  <Lock className="h-3 w-3" />
+                  Locked by source
+                </span>
+              )}
+            </div>
             <FormTextarea
               value={schema?.prefiller || ""}
               setter={(value) => handleFieldChange("prefiller", value)}
               placeholder='() => "Sample Value"'
               required={false}
+              disabled={isDefaultValueLocked(getSource(schema))}
             />
+            {!childPrefillerValidation.valid && (
+              <p className="text-xs text-red-600">
+                {childPrefillerValidation.message}
+              </p>
+            )}
             <p className="text-xs text-slate-500">
               Use <span className="font-mono">() =&gt; "value"</span> or{" "}
               <span className="font-mono">() =&gt; &#123; return #&#123;field_name&#125;; &#125;</span>

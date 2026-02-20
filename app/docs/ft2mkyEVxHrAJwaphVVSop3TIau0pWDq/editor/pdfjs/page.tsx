@@ -30,6 +30,7 @@ import {
 import { getFieldLabelByName } from "@/app/docs/ft2mkyEVxHrAJwaphVVSop3TIau0pWDq/editor/field-template.ctx";
 import {
   FormMetadata,
+  SCHEMA_VERSION,
   type IFormBlock,
   type IFormField,
   type IFormMetadata,
@@ -45,7 +46,7 @@ const generateBlockId = () => `block-${Math.random().toString(36).substr(2, 9)}`
 const BLANK_FORM_METADATA: IFormMetadata = {
   name: "new-form",
   label: "New Form",
-  schema_version: 1,
+  schema_version: SCHEMA_VERSION,
   schema: {
     blocks: [],
   },
@@ -99,7 +100,7 @@ const PdfJsEditorPage = () => {
       return {
         name: creationData.formName,
         label: creationData.formLabel,
-        schema_version: 1,
+        schema_version: SCHEMA_VERSION,
         schema: {
           blocks: [],
         },
@@ -593,7 +594,7 @@ const PdfJsEditorPage = () => {
       const normalizedMetadata: IFormMetadata = {
         name: parsed.name || "untitled",
         label: parsed.label || "Untitled Form",
-        schema_version: parsed.schema_version || 1,
+        schema_version: SCHEMA_VERSION,
         schema: parsed.schema,
         signing_parties: parsed.signing_parties || parsed.signatories || [],
         subscribers: parsed.subscribers || [],

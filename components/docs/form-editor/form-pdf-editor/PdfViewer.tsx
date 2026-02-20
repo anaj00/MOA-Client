@@ -163,27 +163,40 @@ export function PdfViewer() {
           const displayY = e.clientY - rect.top;
 
           const uniqueId = Math.random().toString(36).substr(2, 9);
+          const fieldKey = draggedField.preset
+            ? `${draggedField.name}:${draggedField.preset}`
+            : draggedField.name || "field";
+          const existingForField = blocks.find(
+            (block) =>
+              block.block_type === "form_field" &&
+              block.signing_party_id === (selectedPartyId || "") &&
+              block.field_schema?.field === fieldKey
+          );
+          const baseSchema = existingForField?.field_schema;
           const newBlock: IFormBlock = {
             _id: uniqueId,
             block_type: "form_field",
             signing_party_id: selectedPartyId || "",
             order: 0,
             field_schema: {
-              field: draggedField.preset
-                ? `${draggedField.name}:${draggedField.preset}`
-                : draggedField.name || "field",
-              label: draggedField.label || "New Field",
-              tooltip_label: draggedField.tooltip_label || "",
-              type: draggedField.type,
+              field: fieldKey,
+              label: baseSchema?.label || draggedField.label || "New Field",
+              tooltip_label: baseSchema?.tooltip_label || draggedField.tooltip_label || "",
+              type: baseSchema?.type || draggedField.type,
               page: visiblePage,
               x: Math.max(0, (displayX - 50) / scale),
               y: Math.max(0, (displayY - 6) / scale),
               w: 100,
               h: 12,
-              shared: draggedField.shared ?? true,
-              source: draggedField.source || "manual",
-              ...(draggedField.prefiller && { prefiller: draggedField.prefiller }),
-              ...(draggedField.validator && { validator: draggedField.validator }),
+              align_h: baseSchema?.align_h || "center",
+              align_v: baseSchema?.align_v || "middle",
+              shared: typeof baseSchema?.shared === "boolean" ? baseSchema.shared : (draggedField.shared ?? true),
+              source: baseSchema?.source || draggedField.source || "manual",
+              ...(baseSchema?.prefiller ? { prefiller: baseSchema.prefiller } : draggedField.prefiller ? { prefiller: draggedField.prefiller } : {}),
+              ...(baseSchema?.validator ? { validator: baseSchema.validator } : draggedField.validator ? { validator: draggedField.validator } : {}),
+              ...(baseSchema?.size ? { size: baseSchema.size } : {}),
+              ...(typeof baseSchema?.wrap === "boolean" ? { wrap: baseSchema.wrap } : { wrap: true }),
+              ...(baseSchema?.font ? { font: baseSchema.font } : {}),
             },
           };
 
@@ -567,6 +580,16 @@ const PdfPageCanvas = memo(
         const fieldWidth = 100;
         const fieldHeight = 12;
         const uniqueId = Math.random().toString(36).substr(2, 9);
+        const fieldKey = draggedField.preset
+          ? `${draggedField.name}:${draggedField.preset}`
+          : draggedField.name || "field";
+        const existingForField = blocks.find(
+          (block) =>
+            block.block_type === "form_field" &&
+            block.signing_party_id === (selectedPartyId || "") &&
+            block.field_schema?.field === fieldKey
+        );
+        const baseSchema = existingForField?.field_schema;
 
         const newBlock: IFormBlock = {
           _id: uniqueId,
@@ -574,21 +597,24 @@ const PdfPageCanvas = memo(
           signing_party_id: selectedPartyId || "",
           order: 0,
           field_schema: {
-            field: draggedField.preset
-              ? `${draggedField.name}:${draggedField.preset}`
-              : draggedField.name || "field",
-            label: draggedField.label || "New Field",
-            tooltip_label: draggedField.tooltip_label || "",
-            type: draggedField.type,
+            field: fieldKey,
+            label: baseSchema?.label || draggedField.label || "New Field",
+            tooltip_label: baseSchema?.tooltip_label || draggedField.tooltip_label || "",
+            type: baseSchema?.type || draggedField.type,
             page: pageNumber,
             x: location.pdfX - fieldWidth / 2,
             y: location.pdfY - fieldHeight / 2,
             w: fieldWidth,
             h: fieldHeight,
-            shared: draggedField.shared ?? true,
-            source: draggedField.source || "manual",
-            ...(draggedField.prefiller && { prefiller: draggedField.prefiller }),
-            ...(draggedField.validator && { validator: draggedField.validator }),
+            align_h: baseSchema?.align_h || "center",
+            align_v: baseSchema?.align_v || "middle",
+            shared: typeof baseSchema?.shared === "boolean" ? baseSchema.shared : (draggedField.shared ?? true),
+            source: baseSchema?.source || draggedField.source || "manual",
+            ...(baseSchema?.prefiller ? { prefiller: baseSchema.prefiller } : draggedField.prefiller ? { prefiller: draggedField.prefiller } : {}),
+            ...(baseSchema?.validator ? { validator: baseSchema.validator } : draggedField.validator ? { validator: draggedField.validator } : {}),
+            ...(baseSchema?.size ? { size: baseSchema.size } : {}),
+            ...(typeof baseSchema?.wrap === "boolean" ? { wrap: baseSchema.wrap } : { wrap: true }),
+            ...(baseSchema?.font ? { font: baseSchema.font } : {}),
           },
         };
 

@@ -5,17 +5,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { toastPresets } from "@/components/sonner-toaster";
 import { formsControllerRegisterForm } from "@/app/api";
+import { normalizeBlocksForSave } from "@/lib/form-schema-normalizer";
 import {
   IFormMetadata,
   IFormBlock,
   IFormSigningParty,
   IFormSubscriber,
+  SCHEMA_VERSION,
 } from "@betterinternship/core/forms";
 
 const BLANK_FORM_METADATA: IFormMetadata = {
   name: "new-form",
   label: "New Form",
-  schema_version: 1,
+  schema_version: SCHEMA_VERSION,
   schema: {
     blocks: [],
   },
@@ -98,16 +100,15 @@ export function FormEditorProvider({
   }, []);
 
   const updateBlocks = useCallback((blocks: IFormBlock[]) => {
-    console.log("[updateBlocks] Called with blocks:", blocks);
+    const normalizedBlocks = normalizeBlocksForSave(blocks);
     setFormMetadata((prev) => {
       const newMetadata = {
         ...prev,
         schema: {
           ...prev.schema,
-          blocks,
+          blocks: normalizedBlocks,
         },
       };
-      console.log("[updateBlocks] Setting formMetadata to:", newMetadata);
       return newMetadata;
     });
   }, []);
@@ -132,7 +133,16 @@ export function FormEditorProvider({
     if (!formMetadata) return;
     setIsSaving(true);
     try {
-      await formsControllerRegisterForm(formMetadata);
+      const normalizedMetadata: IFormMetadata = {
+        ...formMetadata,
+        schema_version: SCHEMA_VERSION,
+        schema: {
+          ...formMetadata.schema,
+          blocks: normalizeBlocksForSave(formMetadata.schema.blocks),
+        },
+      };
+
+      await formsControllerRegisterForm(normalizedMetadata);
       queryClient.invalidateQueries({ queryKey: ["docs-forms-names"] });
       queryClient.invalidateQueries({
         queryKey: ["/api/forms/form-latest", { name: formMetadata.name }],

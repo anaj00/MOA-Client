@@ -144,19 +144,40 @@ export function BlocksPanel({
       nextY = Math.min(pageMaxY - fieldHeight, last.field_schema!.y + rowStep);
     }
 
+    const fieldKey = field.name || field.id;
+    const existingForField = blocks.find(
+      (block) =>
+        block.block_type === "form_field" &&
+        block.signing_party_id === partyId &&
+        block.field_schema?.field === fieldKey
+    );
+
+    const baseSchema = existingForField?.field_schema;
+
     const newBlock: IFormBlock = {
       _id: `block-${field.id}-${Date.now()}`,
       block_type: "form_field",
       signing_party_id: partyId,
       order: blocks.length,
       field_schema: {
-        ...field,
-        field: field.name || field.id,
+        field: fieldKey,
+        type: baseSchema?.type || field.type || "text",
         page,
         x: nextX,
         y: nextY,
         w: fieldWidth,
         h: fieldHeight,
+        align_h: baseSchema?.align_h || "center",
+        align_v: baseSchema?.align_v || "middle",
+        label: baseSchema?.label || field.label || field.name || field.id,
+        tooltip_label: baseSchema?.tooltip_label || field.tooltip_label || "",
+        shared: typeof baseSchema?.shared === "boolean" ? baseSchema.shared : (field.shared ?? true),
+        source: baseSchema?.source || field.source || "manual",
+        prefiller: baseSchema?.prefiller ?? field.prefiller,
+        validator: baseSchema?.validator ?? field.validator,
+        size: baseSchema?.size,
+        wrap: baseSchema?.wrap ?? true,
+        font: baseSchema?.font,
       } as any,
     };
 
