@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2, Upload, Check } from "lucide-react";
 import { toast } from "sonner";
-import { FormInput, FormTextarea } from "@/components/docs/forms/EditForm";
+import { FormInput } from "@/components/docs/forms/EditForm";
 import { PartiesPanel } from "@/components/docs/form-editor/form-layout/PartiesPanel";
 import { IFormSigningParty, IFormMetadata } from "@betterinternship/core/forms";
 import { formsControllerRegisterForm } from "@/app/api";
+import { Card } from "@/components/ui/card";
+import { HeaderIcon, HeaderText } from "@/components/ui/text";
 
 const CreateFormPage = () => {
   const router = useRouter();
@@ -75,7 +77,7 @@ const CreateFormPage = () => {
       };
 
       // Use the pre-configured formsControllerRegisterForm function
-      const response = await formsControllerRegisterForm({
+      await formsControllerRegisterForm({
         ...formMetadata,
         base_document: pdfFile,
       });
@@ -98,14 +100,15 @@ const CreateFormPage = () => {
   };
 
   return (
-    <div className="flex w-screen bg-white">
-      {/* Content - Scrolls with footer buttons at end */}
-      <div className="mx-auto w-full max-w-3xl space-y-4 py-8">
-        <h1 className="text-2xl font-semibold text-slate-900">Create New Form</h1>
+    <div className="min-h-screen w-full bg-slate-50/40 px-4 py-6 sm:px-6">
+      <div className="mx-auto w-full max-w-3xl space-y-4">
+        <div className="flex items-center gap-3">
+          <HeaderIcon icon={Upload} />
+          <HeaderText> Create new form</HeaderText>
+        </div>
 
-        {/* Form Label Section - Display Name */}
-        <div className="space-y-1.5">
-          <h2 className="text-slate-900">Display Name</h2>
+        <Card className="gap-2 border-slate-200 px-5 py-3.5">
+          <p className="text-sm font-semibold">Display Name</p>
           <FormInput
             placeholder="Student MOA"
             value={formLabel}
@@ -114,45 +117,45 @@ const CreateFormPage = () => {
           />
           {formLabel && (
             <p className="text-xs text-slate-500">
-              Form name: <span className="font-mono font-semibold">{formName}</span>
+              Form name: <span className="font-mono font-semibold text-slate-700">{formName}</span>
             </p>
           )}
-        </div>
+        </Card>
 
-        {/* PDF Upload Section */}
-        <div className="space-y-1.5">
-          <h2 className="text-slate-900">PDF Document</h2>
-          <div className="rounded-[0.33em] border-2 border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-colors hover:bg-slate-100">
+        <Card className="gap-2 border-slate-200 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900">PDF Document</p>
+          <div className="rounded-[0.33em] border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center transition-colors hover:border-slate-400 hover:bg-slate-100">
             <label className="flex cursor-pointer flex-col items-center gap-2">
-              <Upload className="h-7 w-7 text-slate-400" />
+              <Upload className="h-8 w-8 text-slate-400" />
               <div>
-                <p className="text-xs font-medium text-slate-900">
-                  {pdfFile ? "✓ PDF Uploaded" : "Click to upload PDF"}
+                <p className="text-sm font-semibold text-slate-900">
+                  {pdfFile ? "PDF uploaded" : "Click to upload PDF"}
                 </p>
                 {pdfFile ? (
-                  <p className="mt-0.5 text-[11px] text-slate-600">{pdfFile.name}</p>
+                  <p className="mt-1 text-xs text-slate-600">{pdfFile.name}</p>
                 ) : (
-                  <p className="mt-0.5 text-[11px] text-slate-600">
-                    Drag and drop or click to select
-                  </p>
+                  <p className="mt-1 text-xs text-slate-600">Drag and drop or click to select</p>
                 )}
               </div>
               <input type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" />
             </label>
           </div>
-        </div>
+        </Card>
 
-        {/* Recipients Section */}
-        <div className="space-y-1.5">
-          <h2 className="text-slate-900">Add Recipients</h2>
-          <div className="rounded-lg bg-slate-50 p-3">
+        <Card className="gap-2 border-slate-200 px-5 py-3.5">
+          <p className="text-sm font-semibold text-slate-900">Add a recipient</p>
+          <div className="rounded-b-[0.33em] bg-slate-50">
             <PartiesPanel parties={signingParties} onPartiesChange={setSigningParties} />
           </div>
-        </div>
+        </Card>
 
-        {/* Footer Buttons - At end of scrollable content */}
-        <div className="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4">
-          <Button onClick={handleCreateForm} disabled={isLoading} className="" size="sm">
+        <div className="flex justify-end border-t border-slate-200 pt-4">
+          <Button
+            onClick={handleCreateForm}
+            disabled={isLoading}
+            size="md"
+            className="items-center"
+          >
             {isLoading ? (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" />
