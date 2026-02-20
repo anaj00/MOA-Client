@@ -101,6 +101,22 @@ export function PdfViewer() {
     pageRefs.current.set(page, node);
   }, []);
 
+  useEffect(() => {
+    if (!selectedFieldId) return;
+    const container = pdfContainerRef.current;
+    if (!container) return;
+
+    const scrollToField = () => {
+      const fieldNode = container.querySelector(
+        `[data-field-id="${selectedFieldId}"]`
+      ) as HTMLElement | null;
+      fieldNode?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    };
+
+    const frameId = window.requestAnimationFrame(scrollToField);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [selectedFieldId]);
+
   const handlePdfScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
       const containerRect = e.currentTarget.getBoundingClientRect();
@@ -190,12 +206,25 @@ export function PdfViewer() {
               h: 12,
               align_h: baseSchema?.align_h || "center",
               align_v: baseSchema?.align_v || "middle",
-              shared: typeof baseSchema?.shared === "boolean" ? baseSchema.shared : (draggedField.shared ?? true),
+              shared:
+                typeof baseSchema?.shared === "boolean"
+                  ? baseSchema.shared
+                  : (draggedField.shared ?? true),
               source: baseSchema?.source || draggedField.source || "manual",
-              ...(baseSchema?.prefiller ? { prefiller: baseSchema.prefiller } : draggedField.prefiller ? { prefiller: draggedField.prefiller } : {}),
-              ...(baseSchema?.validator ? { validator: baseSchema.validator } : draggedField.validator ? { validator: draggedField.validator } : {}),
+              ...(baseSchema?.prefiller
+                ? { prefiller: baseSchema.prefiller }
+                : draggedField.prefiller
+                  ? { prefiller: draggedField.prefiller }
+                  : {}),
+              ...(baseSchema?.validator
+                ? { validator: baseSchema.validator }
+                : draggedField.validator
+                  ? { validator: draggedField.validator }
+                  : {}),
               ...(baseSchema?.size ? { size: baseSchema.size } : {}),
-              ...(typeof baseSchema?.wrap === "boolean" ? { wrap: baseSchema.wrap } : { wrap: true }),
+              ...(typeof baseSchema?.wrap === "boolean"
+                ? { wrap: baseSchema.wrap }
+                : { wrap: true }),
               ...(baseSchema?.font ? { font: baseSchema.font } : {}),
             },
           };
@@ -313,7 +342,7 @@ export function PdfViewer() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <div className="inline-flex flex-col items-start gap-4">
+            <div className="flex w-full flex-col items-center gap-4">
               {pagesArray.map((page) => (
                 <PdfPageCanvas
                   key={page}
@@ -375,7 +404,7 @@ const PdfPageCanvas = memo(
     _registry,
     formMetadata,
   }: PdfPageCanvasProps) => {
-    const { handleBlockCreate } = useFormEditorTab();
+    const { handleBlockCreate, handleDeleteBlock, handleDuplicateBlock } = useFormEditorTab();
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const viewportRef = useRef<PageViewport | null>(null);
@@ -608,10 +637,21 @@ const PdfPageCanvas = memo(
             h: fieldHeight,
             align_h: baseSchema?.align_h || "center",
             align_v: baseSchema?.align_v || "middle",
-            shared: typeof baseSchema?.shared === "boolean" ? baseSchema.shared : (draggedField.shared ?? true),
+            shared:
+              typeof baseSchema?.shared === "boolean"
+                ? baseSchema.shared
+                : (draggedField.shared ?? true),
             source: baseSchema?.source || draggedField.source || "manual",
-            ...(baseSchema?.prefiller ? { prefiller: baseSchema.prefiller } : draggedField.prefiller ? { prefiller: draggedField.prefiller } : {}),
-            ...(baseSchema?.validator ? { validator: baseSchema.validator } : draggedField.validator ? { validator: draggedField.validator } : {}),
+            ...(baseSchema?.prefiller
+              ? { prefiller: baseSchema.prefiller }
+              : draggedField.prefiller
+                ? { prefiller: draggedField.prefiller }
+                : {}),
+            ...(baseSchema?.validator
+              ? { validator: baseSchema.validator }
+              : draggedField.validator
+                ? { validator: draggedField.validator }
+                : {}),
             ...(baseSchema?.size ? { size: baseSchema.size } : {}),
             ...(typeof baseSchema?.wrap === "boolean" ? { wrap: baseSchema.wrap } : { wrap: true }),
             ...(baseSchema?.font ? { font: baseSchema.font } : {}),
@@ -673,7 +713,7 @@ const PdfPageCanvas = memo(
 
     const handleFieldResize = (
       fieldId: string,
-      handle: "nw" | "ne" | "sw" | "se",
+      handle: "n" | "e" | "s" | "w" | "nw" | "ne" | "sw" | "se",
       displayDeltaX: number,
       displayDeltaY: number
     ) => {
@@ -689,8 +729,17 @@ const PdfPageCanvas = memo(
       let newW = fieldSchema.w;
       let newH = fieldSchema.h;
 
-      // Handle corner resizes: adjust position and size based on which corner is dragged
-      if (handle === "nw") {
+      if (handle === "n") {
+        newY = Math.max(0, fieldSchema.y + pdfDeltaY);
+        newH = Math.max(minSize, fieldSchema.h - pdfDeltaY);
+      } else if (handle === "e") {
+        newW = Math.max(minSize, fieldSchema.w + pdfDeltaX);
+      } else if (handle === "s") {
+        newH = Math.max(minSize, fieldSchema.h + pdfDeltaY);
+      } else if (handle === "w") {
+        newX = Math.max(0, fieldSchema.x + pdfDeltaX);
+        newW = Math.max(minSize, fieldSchema.w - pdfDeltaX);
+      } else if (handle === "nw") {
         // Top-left: move position and shrink size
         newX = Math.max(0, fieldSchema.x + pdfDeltaX);
         newY = Math.max(0, fieldSchema.y + pdfDeltaY);
@@ -725,12 +774,60 @@ const PdfPageCanvas = memo(
       onBlockUpdate(updatedBlock);
     };
 
+    const handleFieldRecipientChange = (fieldId: string, partyId: string) => {
+      const block = blocks.find((b) => b._id === fieldId);
+      if (!block) return;
+      onBlockUpdate({ ...block, signing_party_id: partyId });
+    };
+
+    const findSameFieldIds = (fieldId: string): string[] => {
+      const target = blocks.find((b) => b._id === fieldId);
+      const fieldName = target?.field_schema?.field;
+      if (!fieldName) return [fieldId];
+      return blocks
+        .filter((b) => b.block_type === "form_field" && b.field_schema?.field === fieldName)
+        .sort((a, b) => {
+          const aPage = a.field_schema?.page || 0;
+          const bPage = b.field_schema?.page || 0;
+          if (aPage !== bPage) return aPage - bPage;
+          return (a.order || 0) - (b.order || 0);
+        })
+        .map((b) => b._id);
+    };
+
+    const selectSameFieldAtIndex = (ids: string[], index: number) => {
+      const targetId = ids[index];
+      if (!targetId) return;
+      const targetBlock = blocks.find((b) => b._id === targetId);
+      const targetPage = targetBlock?.field_schema?.page;
+      if (typeof targetPage === "number" && targetPage > 0) {
+        onVisible(targetPage);
+      }
+      onFieldSelect(targetId);
+    };
+
+    const handleSelectNextSameField = (fieldId: string) => {
+      const ids = findSameFieldIds(fieldId);
+      if (ids.length <= 1) return;
+      const idx = ids.indexOf(fieldId);
+      const nextIndex = (idx + 1 + ids.length) % ids.length;
+      selectSameFieldAtIndex(ids, nextIndex);
+    };
+
+    const handleSelectPrevSameField = (fieldId: string) => {
+      const ids = findSameFieldIds(fieldId);
+      if (ids.length <= 1) return;
+      const idx = ids.indexOf(fieldId);
+      const prevIndex = (idx - 1 + ids.length) % ids.length;
+      selectSameFieldAtIndex(ids, prevIndex);
+    };
+
     return (
       <div
         ref={containerRef}
         data-page={pageNumber}
         className={cn(
-          "relative w-full max-w-4xl overflow-hidden rounded-[0.33em] border bg-white shadow-sm transition-colors",
+          "relative w-fit max-w-none overflow-hidden rounded-[0.33em] border bg-white shadow-sm transition-colors",
           isSelected ? "border-primary/80 ring-primary/50 ring-1" : "border-border"
         )}
       >
@@ -777,14 +874,19 @@ const PdfPageCanvas = memo(
                 y: schema.y,
                 w: schema.w,
                 h: schema.h,
+                signing_party_id: block.signing_party_id,
                 signing_party_order:
                   formMetadata?.signing_parties?.find((p) => p._id === block.signing_party_id)
                     ?.order ?? 0,
               };
 
+              const sameFieldIds = findSameFieldIds(fieldId);
+              const sameFieldIndex = Math.max(0, sameFieldIds.indexOf(fieldId)) + 1;
+
               return (
                 <div
                   key={fieldId}
+                  data-field-id={fieldId}
                   className="pointer-events-auto relative z-20"
                   style={{
                     position: "absolute",
@@ -806,6 +908,20 @@ const PdfPageCanvas = memo(
                       handleFieldResize(fieldId, handle, deltaX, deltaY)
                     }
                     onResizeEnd={() => {}}
+                    signingPartyOptions={(formMetadata?.signing_parties || []).map((party) => ({
+                      id: party._id,
+                      name: party.signatory_title || party._id,
+                    }))}
+                    onSigningPartyChange={(partyId) => handleFieldRecipientChange(fieldId, partyId)}
+                    onDelete={() => handleDeleteBlock(fieldId)}
+                    onDuplicate={() => {
+                      const block = blocks.find((b) => b._id === fieldId);
+                      if (block) handleDuplicateBlock(block);
+                    }}
+                    sameFieldIndex={sameFieldIndex}
+                    sameFieldCount={sameFieldIds.length}
+                    onPrevSameField={() => handleSelectPrevSameField(fieldId)}
+                    onNextSameField={() => handleSelectNextSameField(fieldId)}
                   />
                 </div>
               );
